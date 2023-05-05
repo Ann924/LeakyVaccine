@@ -8,13 +8,12 @@ import time
 import json
 
 def generate_samples(number_of_vertices, number_of_samples, leak_probability):
-    z = np.zeros((number_of_samples, number_of_vertices))
+    samples = np.zeros((number_of_samples, number_of_vertices))
     for i in range(number_of_samples):
-        z[i, :] = np.random.choice([0, 1], size=number_of_vertices, p=[leak_probability, 1-leak_probability])
-    return z
+        samples[i, :] = np.random.choice([0, 1], size=number_of_vertices, p=[leak_probability, 1-leak_probability])
+    return samples
 
-def get_lp_solution(vertices, edges, samples, budget):
-    
+def get_lp_solution(vertices, edges, samples, budget, epsilon):
     try:
         start_lp_setup = time.time()
         
@@ -97,24 +96,24 @@ def evaluate_vaccination(G, vaccinated_vertices, samples):
     # samples contains indicator variables for whether the vertices leak the disease after being vaccinated
     
     vaccinated_vertices = np.array(list(vaccinated_vertices))
-    samples = np.array(samples)
     
     total_edges = len(G.edges)
     removed_edges = 0
     for s in samples:
         successful_vaccinations = vaccinated_vertices[s==1]
         removed_edges += len(G.edges(successful_vaccinations))
-    return (total_edges * len(samples) - removed_edges)/len(samples)/len(G.nodes)
+    return (total_edges - (removed_edges/len(samples)))/len(G.nodes)
     
 # ---------------   Define variables    ------------------ #
 
 # B is the budget on the number of vertices that can be vaccinated
-budget = 10
+'''budget = 10
 num_vertices = 50
 edge_connectivity = 0.5
 sample_size = 100
 leak_probability = 0.2
-epsilon = 0.1
+epsilon = 0.01
+test_sample_size = 1000
 
 num_vertices = int(sys.argv[1]) if len(sys.argv)>1 else num_vertices
 edge_connectivity = float(sys.argv[2]) if len(sys.argv)>2 else edge_connectivity
@@ -144,12 +143,12 @@ print("Time to Setup Samples:", end_setup-start_setup)
 
 # --------------------   Solve LP    --------------------- #
 
-lp_solution = get_lp_solution(vertices, edges, samples, budget)
+lp_solution = get_lp_solution(vertices, edges, samples, budget, epsilon)
 vaccinated_vertices = lp_solution["rounded_solution"]
 
 # --------------------   Evaluate LP    --------------------- #
 
-new_samples = generate_samples(len(vaccinated_vertices), sample_size, leak_probability)
+new_samples = generate_samples(len(vaccinated_vertices), test_sample_size, leak_probability)
 avg_degree_obj = evaluate_vaccination(G, vaccinated_vertices, new_samples)
 print("Simulated Average Degree:", avg_degree_obj)
 
@@ -163,4 +162,4 @@ with open("avg_degree_run.json", 'w') as f:
                "lp_objective": lp_solution["lp_objective"],
                "lp_time": lp_solution["total_time"],
                "evaluated_objective": avg_degree_obj
-              }, f)
+              }, f)'''

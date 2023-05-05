@@ -3,15 +3,16 @@ import networkx as nx
 import sys
 import os
 import json
-from avg_degree import generate_samples, get_lp_solution, evaluate_vaccination
+from avg_degree import *
 
-# B is the budget on the number of vertices that can be vaccinated
+# set the budget on the number of vertices that can be vaccinated
 budget = 10
 num_vertices = 50
 edge_connectivity = 0.5
 sample_size = 100
+test_sample_size = 1000
 leak_probability = 0.2
-epsilon = 0.1
+epsilon = 0.5
 
 for trial in range(10):
     G = nx.erdos_renyi_graph(num_vertices, edge_connectivity)
@@ -38,12 +39,12 @@ for trial in range(10):
 
         # --------------------   Solve LP    --------------------- #
 
-        lp_solution = get_lp_solution(vertices, edges, samples, budget)
+        lp_solution = get_lp_solution(vertices, edges, samples, budget, epsilon)
         vaccinated_vertices = lp_solution["rounded_solution"]
 
         # --------------------   Evaluate LP    --------------------- #
 
-        new_samples = generate_samples(len(vaccinated_vertices), sample_size, leak_probability)
+        new_samples = generate_samples(len(vaccinated_vertices), test_sample_size, leak_probability)
         avg_degree_obj = evaluate_vaccination(G, vaccinated_vertices, new_samples)
         print("Simulated Average Degree:", avg_degree_obj)
 
