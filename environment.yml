@@ -1,4 +1,4 @@
 name: leakyvacc
 channels:
   - defaults
-prefix: C:\Users\al146\miniconda3\envs\leakyvacc
+prefix: /home/al7gc/.conda/envs/leakyvacc
