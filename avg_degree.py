@@ -27,6 +27,7 @@ def get_lp_solution(vertices, edges, samples, budget, epsilon):
         # Create edge-coverage indicator variables
         # 0 = not covered, 1 = covered
         y = m.addMVar((len(samples), len(edges)), lb=0, ub=1)
+        #y = m.addMVar(len(edges), lb=0, ub=len(samples))
         print("Created Y Variables")
 
         # Set objective
@@ -41,13 +42,16 @@ def get_lp_solution(vertices, edges, samples, budget, epsilon):
 
             v1 = edge[0]
             v2 = edge[1]
-
+            
+            # TODO: need to bound y correctly FIX
+            # m.addConstr(gp.quicksum(sample[v1]*x[v1] + sample[v2]*x[v2] for sample in samples) >= y[i])
+            
             for j in range(len(samples)):
                 m.addConstr(samples[j][v1]*x[v1] + samples[j][v2]*x[v2] >= y[j][i])
+            
         print("Set Coverage Constraint")
 
         end_lp_setup = time.time()
-        print("Time to Setup LP:", end_lp_setup-start_lp_setup)
 
         start_lp_solution = time.time()
         
@@ -62,6 +66,7 @@ def get_lp_solution(vertices, edges, samples, budget, epsilon):
         print("Rounded Solution Size:", len(x_rounded))
 
         end_lp_solution = time.time()
+        print("Time to Setup LP:", end_lp_setup-start_lp_setup)
         print("Time to Solve LP:", end_lp_solution-start_lp_solution)
         
         return {"given_solution": list([float(var.X) for var in x]),
@@ -89,10 +94,16 @@ def lp_round(epsilon, x):
                 cover.add(i)
     return cover
 
+def calculate_avg_degree(G):
+    return 2*len(G.edges)/len(G.nodes)
+
+def calculate_max_degree(G):
+    return max(G.degree(), key=lambda x:x[1])[1]
+
 """
 Returns the average degree of the resulting vaccination graph
 """
-def evaluate_vaccination(G, vaccinated_vertices, samples):
+def evaluate_avg_degree(G, vaccinated_vertices, samples):
     # samples contains indicator variables for whether the vertices leak the disease after being vaccinated
     
     vaccinated_vertices = np.array(list(vaccinated_vertices))
@@ -102,17 +113,55 @@ def evaluate_vaccination(G, vaccinated_vertices, samples):
     for s in samples:
         successful_vaccinations = vaccinated_vertices[s==1]
         removed_edges += len(G.edges(successful_vaccinations))
-    return (total_edges - (removed_edges/len(samples)))/len(G.nodes)
+    return 2*(total_edges - (removed_edges/len(samples)))/len(G.nodes)
+
+"""
+Returns the max degree of the resulting vaccination graph
+"""
+def evaluate_max_degree(G, vaccinated_vertices, samples):
+    # samples contains indicator variables for whether the vertices leak the disease after being vaccinated
     
+    vaccinated_vertices = np.array(list(vaccinated_vertices))
+    
+    total_max = 0
+    for s in samples:
+        
+        G_copy = G.copy()
+        successful_vaccinations = vaccinated_vertices[s==1]
+        removed_edges = G.edges(successful_vaccinations)
+        G_copy.remove_edges_from(removed_edges)
+        
+        max_degree = max(G_copy.degree(), key=lambda x:x[1])[1]
+        total_max += max_degree
+        
+    return total_max/len(samples)
+
+"""
+Returns the spectral radius of the resulting vaccination graph
+"""
+def evaluate_spectral_radius(G, vaccinated_vertices, samples):
+    # samples contains indicator variables for whether the vertices leak the disease after being vaccinated
+    
+    vaccinated_vertices = np.array(list(vaccinated_vertices))
+    
+    total_spectral_radius = 0
+    for s in samples:
+        G_copy = G.copy()
+        successful_vaccinations = vaccinated_vertices[s==1]
+        removed_edges = G.edges(successful_vaccinations)
+        G_copy.remove_edges_from(removed_edges)
+        spectral_radius = max(nx.adjacency_spectrum(G_copy))
+        total_spectral_radius += spectral_radius.real
+    return total_spectral_radius/len(samples)
 # ---------------   Define variables    ------------------ #
 
-# B is the budget on the number of vertices that can be vaccinated
-'''budget = 10
+'''# B is the budget on the number of vertices that can be vaccinated
+budget = 10
 num_vertices = 50
 edge_connectivity = 0.5
 sample_size = 100
 leak_probability = 0.2
-epsilon = 0.01
+epsilon = 0.5
 test_sample_size = 1000
 
 num_vertices = int(sys.argv[1]) if len(sys.argv)>1 else num_vertices
@@ -146,11 +195,17 @@ print("Time to Setup Samples:", end_setup-start_setup)
 lp_solution = get_lp_solution(vertices, edges, samples, budget, epsilon)
 vaccinated_vertices = lp_solution["rounded_solution"]
 
+print("Total LP Time:", lp_solution["total_time"])
+
 # --------------------   Evaluate LP    --------------------- #
 
 new_samples = generate_samples(len(vaccinated_vertices), test_sample_size, leak_probability)
-avg_degree_obj = evaluate_vaccination(G, vaccinated_vertices, new_samples)
+avg_degree_obj = evaluate_avg_degree(G, vaccinated_vertices, new_samples)
+max_degree_obj = evaluate_max_degree(G, vaccinated_vertices, new_samples)
+spectral_radius_obj = evaluate_spectral_radius(G, vaccinated_vertices, new_samples)
 print("Simulated Average Degree:", avg_degree_obj)
+print("Simulated Max Degree:", max_degree_obj)
+print("Simulated Spectral Radius:", spectral_radius_obj)
 
 with open("avg_degree_run.json", 'w') as f:
     

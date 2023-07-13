@@ -1,0 +1,1 @@
+[{"lp_type": "avg_degree", "num_vertices": 10000, "num_edges": 84025, "sample_size": 500, "budget": 500, "leak_probability": 0.2, "rounded_solution_size": 510, "lp_objective": 6.815589749999999, "original_avg_degree": 16.805, "original_max_degree": 75, "evaluated_avg_degree": 13.694772, "evaluated_max_degree": 60.698, "total_time": 772.5886702537537}]
