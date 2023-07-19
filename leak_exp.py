@@ -7,7 +7,8 @@ from lp_utils import *
 from data_utils import *
 import random
 
-graph_seed = random.randint(0, 10**10)
+#graph_seed = random.randint(0, 10**10)
+graph_seed = 42
 G = load_graph()
 G = find_neighborhood(G, size=1000, seed=graph_seed)
 #G = find_neighborhood(G, size=20)
@@ -32,7 +33,13 @@ infection_trials = 15
 
 for t in range(15):
     
-    leak_lower = 25
+    if t<5:
+        print(f"Skip Trial {t}")
+        continue
+    elif t==5:
+        leak_lower = 250
+    else:
+        leak_lower = 25
 
     for leak in range(leak_lower, 310, 25):
 
